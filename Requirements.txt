@@ -1,0 +1,6 @@
+numpy
+pandas
+scikit-learn
+joblib
+opencv-python
+scikit-image==0.25.0
