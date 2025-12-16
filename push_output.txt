@@ -1,0 +1,8 @@
+Uploading LFS objects: 100% (1/1), 179 MB | 0 B/s, done.
+remote: error: Trace: bf0bd3230be0ae4664f08d1cdcc8b96f6904e7ad3745ffec8c5c71006b6cff8c        
+remote: error: See https://gh.io/lfs for more information.        
+remote: error: File welding_defect_baseline_model.pkl is 170.74 MB; this exceeds GitHub's file size limit of 100.00 MB        
+remote: error: GH001: Large files detected. You may want to try Git Large File Storage - https://git-lfs.github.com.        
+To https://github.com/Dlyght27/WeldSentryAI.git
+ ! [remote rejected] main -> main (pre-receive hook declined)
+error: failed to push some refs to 'https://github.com/Dlyght27/WeldSentryAI.git'
