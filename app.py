@@ -25,39 +25,60 @@ st.markdown("""
         margin-bottom: 2rem;
     }
     .info-box {
-        background-color: #f0f8ff;
-        padding: 1rem;
+        background-color: #2d3748;
+        color: #e2e8f0;
+        padding: 1.5rem;
         border-left: 5px solid #2a5298;
         border-radius: 5px;
         margin: 1rem 0;
     }
     .defect-card {
-        background-color: #fff;
+        background-color: #2d3748;
+        color: #e2e8f0;
         padding: 1rem;
         border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         margin: 0.5rem 0;
     }
+    .defect-card h4 {
+        color: #fc8181;
+        margin-bottom: 0.5rem;
+    }
     .warning-banner {
-        background-color: #fff3cd;
+        background-color: #744210;
+        color: #fefcbf;
         border-left: 5px solid #ffc107;
         padding: 1rem;
         border-radius: 5px;
         margin: 1rem 0;
     }
     .success-banner {
-        background-color: #d4edda;
+        background-color: #22543d;
+        color: #c6f6d5;
         border-left: 5px solid #28a745;
         padding: 1rem;
         border-radius: 5px;
         margin: 1rem 0;
     }
     .error-banner {
-        background-color: #f8d7da;
+        background-color: #742a2a;
+        color: #fed7d7;
         border-left: 5px solid #dc3545;
         padding: 1rem;
         border-radius: 5px;
         margin: 1rem 0;
+    }
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        background-color: #2d3748;
+        color: #e2e8f0;
+        border-radius: 4px;
+        padding: 8px 16px;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #4a5568;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -116,7 +137,7 @@ def is_welding_image(image):
 
     return True, "Valid Welding Image"
 
-# --- Feature Extraction Functions ---
+# --- Feature Extraction Functions (Using App 2's working code) ---
 def enhance_image(image):
     """Enhances the image using CLAHE for better feature extraction."""
     img_np = np.array(image.convert('L'))
@@ -142,16 +163,13 @@ def extract_glcm_features(image):
     if image.max() == image.min():
         return np.zeros(16)
     
-    # Normalize image to 0-255 range
-    img_normalized = ((image - image.min()) / (image.max() - image.min()) * 255).astype(np.uint8)
-    
-    glcm = graycomatrix(img_normalized, [1], [0, np.pi/4, np.pi/2, 3*np.pi/4], 
+    glcm = graycomatrix(image, [1], [0, np.pi/4, np.pi/2, 3*np.pi/4], 
                         256, symmetric=True, normed=True)
     props = ['contrast', 'energy', 'homogeneity', 'correlation']
     return np.concatenate([graycoprops(glcm, p).ravel() for p in props])
 
 def get_prediction(image, use_enhancement):
-    """Generate prediction for the weld image."""
+    """Generate prediction for the weld image - Using App 2's working logic."""
     if model is None:
         return "Model not loaded", 0.0, None
 
@@ -209,14 +227,14 @@ def display_prediction_result(label, confidence, proba=None):
         else:
             st.warning("🟠 **Low Confidence** - The model is uncertain. Professional inspection is strongly recommended.")
         
-        st.markdown("""
-        **Characteristics of a Good Weld:**
-        - Uniform bead width and height
-        - Smooth, consistent appearance
-        - No visible cracks, pores, or undercuts
-        - Proper penetration without excessive reinforcement
-        - Clean, free from slag and spatter
-        """)
+        with st.expander("ℹ️ Characteristics of a Good Weld"):
+            st.markdown("""
+            - ✓ Uniform bead width and height
+            - ✓ Smooth, consistent appearance
+            - ✓ No visible cracks, pores, or undercuts
+            - ✓ Proper penetration without excessive reinforcement
+            - ✓ Clean, free from slag and spatter
+            """)
         
     else:  # Defective Weld
         st.markdown(f"""
@@ -235,19 +253,19 @@ def display_prediction_result(label, confidence, proba=None):
         else:
             st.warning("🟠 **Low Confidence** - The model is uncertain. Professional inspection needed.")
         
-        st.markdown("""
-        **Common Weld Defects to Check:**
-        - **Porosity:** Gas pockets trapped in the weld
-        - **Cracks:** Linear fractures in the weld or base metal
-        - **Undercut:** Groove at the toe of the weld
-        - **Lack of Fusion:** Incomplete bonding between weld and base metal
-        - **Slag Inclusion:** Non-metallic material trapped in weld
-        - **Overlap:** Excess weld metal extending beyond the toe
-        """)
+        with st.expander("⚠️ Common Weld Defects to Check"):
+            st.markdown("""
+            - **Porosity:** Gas pockets trapped in the weld
+            - **Cracks:** Linear fractures in the weld or base metal
+            - **Undercut:** Groove at the toe of the weld
+            - **Lack of Fusion:** Incomplete bonding between weld and base metal
+            - **Slag Inclusion:** Non-metallic material trapped in weld
+            - **Overlap:** Excess weld metal extending beyond the toe
+            """)
     
     st.markdown("""
     <div class="warning-banner">
-        <strong>⚠️ Important Notice:</strong> This is a screening tool developed as an educational project by a mechanical engineering student. 
+        <strong>⚠️ Important Notice:</strong> This is a screening tool developed as an educational project. 
         Critical welds require verification by certified welding inspectors (CWI). Always follow industry standards (AWS, ASME, ISO) for structural and safety-critical applications.
     </div>
     """, unsafe_allow_html=True)
@@ -401,7 +419,13 @@ st.markdown("""
 
 # Sidebar Controls
 with st.sidebar:
-    st.image("https://via.placeholder.com/250x100/1e3c72/ffffff?text=WeldSentry+AI", use_container_width=True)
+    st.markdown("""
+    <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 1rem; border-radius: 10px; text-align: center; margin-bottom: 1rem;'>
+        <h2 style='color: white; margin: 0;'>WeldSentry AI</h2>
+        <p style='color: #e2e8f0; margin: 0; font-size: 0.9em;'>ML-Powered Quality Control</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
     st.markdown("---")
     
     st.header("⚙️ Analysis Settings")
