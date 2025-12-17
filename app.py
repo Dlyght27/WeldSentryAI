@@ -5,6 +5,8 @@ import numpy as np
 import cv2
 import joblib
 import webbrowser
+from skimage.feature import hog, local_binary_pattern
+from skimage.feature import graycomatrix, graycoprops
 
 # Load the model
 try:
@@ -16,22 +18,7 @@ except Exception as e:
 def is_welding_image(image):
     """
     Placeholder function to detect if an image is a welding image.
-    This should be replaced with a more robust detection mechanism.
     """
-    # Simple check based on grayscale intensity and color.
-    # This is a heuristic and might not be accurate.
-    # gray_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2GRAY)
-    # if np.mean(gray_image) < 50 or np.mean(gray_image) > 200:
-    #     return False
-    
-    # # Check for dominant colors often found in welding (e.g., bright yellows, oranges, blues)
-    # hsv = cv2.cvtColor(np.array(image), cv.COLOR_RGB2HSV)
-    # lower_yellow = np.array([20, 100, 100])
-    # upper_yellow = np.array([30, 255, 255])
-    # mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
-    # if cv2.countNonZero(mask) > image.size[0] * image.size[1] * 0.1:
-    #     return True
-
     return True
 
 def enhance_image(image):
@@ -43,6 +30,37 @@ def enhance_image(image):
     enhanced_img = clahe.apply(img_np)
     return Image.fromarray(enhanced_img).convert('RGB')
 
+def extract_hog_features(image):
+    features, hog_image = hog(image, orientations=8, pixels_per_cell=(16, 16),
+                             cells_per_block=(1, 1), visualize=True, block_norm='L2-Hys')
+    return features
+
+def extract_lbp_features(image, P=8, R=1):
+    lbp = local_binary_pattern(image, P, R, method='uniform')
+    (hist, _) = np.histogram(lbp.ravel(), bins=np.arange(0, P + 3), range=(0, P + 2))
+    hist = hist.astype("float")
+    hist /= (hist.sum() + 1e-6)
+    return hist
+
+def extract_glcm_features(image):
+    glcm = graycomatrix(image, distances=[5], angles=[0], levels=256,
+                        symmetric=True, normed=True)
+    contrast = graycoprops(glcm, 'contrast')[0, 0]
+    dissimilarity = graycoprops(glcm, 'dissimilarity')[0, 0]
+    homogeneity = graycoprops(glcm, 'homogeneity')[0, 0]
+    energy = graycoprops(glcm, 'energy')[0, 0]
+    correlation = graycoprops(glcm, 'correlation')[0, 0]
+    ASM = graycoprops(glcm, 'ASM')[0, 0]
+    return [contrast, dissimilarity, homogeneity, energy, correlation, ASM]
+
+def extract_all_features(image):
+    hog_features = extract_hog_features(image)
+    lbp_features = extract_lbp_features(image)
+    glcm_features = extract_glcm_features(image)
+    
+    combined_features = np.hstack([hog_features, lbp_features, glcm_features])
+    return combined_features
+
 def get_prediction(image):
     """
     Get prediction and confidence score from the model.
@@ -50,16 +68,20 @@ def get_prediction(image):
     if model is None:
         return "Model not loaded", 0.0
 
-    # Preprocess the image to match model's expected input
-    image = image.resize((224, 224)) # Assuming the model expects 224x224 images
-    image = np.array(image)
-    image = image / 255.0
-    image = np.expand_dims(image, axis=0) # Add batch dimension
+    # Preprocess the image
+    image_resized = image.resize((128, 128))
+    img_gray = np.array(image_resized.convert('L'))
+
+    # Extract features
+    features = extract_all_features(img_gray)
+
+    # Reshape for the model
+    features_reshaped = features.reshape(1, -1)
 
     try:
-        prediction = model.predict(image)
-        confidence = np.max(model.predict_proba(image))
-        label = "Good Weld" if prediction[0] == 1 else "Defective Weld"
+        prediction = model.predict(features_reshaped)
+        confidence = np.max(model.predict_proba(features_reshaped))
+        label = "Good Weld" if prediction[0] == 0 else "Defective Weld"
         return label, confidence
     except Exception as e:
         st.error(f"Error during prediction: {e}")
@@ -110,7 +132,7 @@ if uploaded_files:
                 st.image(enhanced_image, caption="Enhanced Image", use_column_width=True)
 
         with st.spinner("Analyzing weld quality..."):
-            label, confidence = get_prediction(enhanced_image)
+            label, confidence = get_prediction(original_image)
 
         st.markdown("---")
         st.subheader("Prediction:")
