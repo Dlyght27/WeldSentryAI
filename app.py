@@ -435,10 +435,10 @@ with st.sidebar:
     
     st.markdown("---")
     st.markdown("""
-    <div style='text-align: center; padding: 1rem;'>
+    <div style='text-align: center; padding: 1rem; background-color: #1e3c72; color: white; border-radius: 8px;'>
         <p><strong>Version 1.0</strong></p>
-        <p>Developed by Mechanical Engineering Student</p>
-        <p style='font-size: 0.8em;'>Educational Project - Industrial Training</p>
+        <p>Developed by <strong>Daniel Israel</strong></p>
+        <p style='font-size: 0.9em;'>Machine Learning Engineering Portfolio Project</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -594,21 +594,34 @@ with tab3:
 # Footer
 st.markdown("---")
 st.markdown("""
-<div style='text-align: center; background-color: #f8f9fa; padding: 2rem; border-radius: 10px;'>
-    <h3>About WeldSentry AI</h3>
-    <p><strong>⚠️ Important Disclaimer:</strong></p>
-    <p>This is a Version 1.0 prototype model developed for educational purposes during industrial training 
-    by a mechanical engineering student. This system serves as a screening tool to assist with initial 
-    quality assessment but should NOT be used as the sole method for quality control decisions.</p>
+<div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 2.5rem; border-radius: 15px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);'>
+    <h2 style='text-align: center; margin-bottom: 1.5rem; color: white;'>About WeldSentry AI</h2>
     
-    <p><strong>For critical applications:</strong></p>
-    <ul style='list-style-position: inside; text-align: center;'>
-        <li>Always consult certified welding inspectors (CWI)</li>
-        <li>Follow relevant industry standards (AWS, ASME, ISO)</li>
-        <li>Perform required destructive and non-destructive testing</li>
-        <li>Maintain proper documentation and traceability</li>
-    </ul>
+    <div style='background-color: rgba(255, 255, 255, 0.1); padding: 1.5rem; border-radius: 10px; margin-bottom: 1.5rem; border-left: 5px solid #ffd700;'>
+        <p style='font-size: 1.1em; margin: 0;'><strong>⚠️ Professional Disclaimer</strong></p>
+        <p style='margin-top: 0.5rem;'>WeldSentry AI is an AI-powered screening tool designed to assist with preliminary weld quality assessment. 
+        This system leverages machine learning algorithms trained on welding defect patterns to provide rapid analysis.</p>
+    </div>
     
-    <p style='margin-top: 1rem;'><em>Continuous improvement and feedback are essential for model enhancement.</em></p>
+    <div style='background-color: rgba(255, 255, 255, 0.1); padding: 1.5rem; border-radius: 10px; margin-bottom: 1.5rem;'>
+        <p style='font-size: 1.05em; margin-bottom: 1rem;'><strong>⚙️ System Capabilities & Limitations:</strong></p>
+        <p style='margin: 0.5rem 0;'>✓ Rapid preliminary defect screening using computer vision</p>
+        <p style='margin: 0.5rem 0;'>✓ Batch processing for efficiency in quality control workflows</p>
+        <p style='margin: 0.5rem 0;'>✓ Educational tool for understanding weld defect characteristics</p>
+        <p style='margin: 0.5rem 0; margin-top: 1rem;'>⚠️ Not a replacement for certified inspection procedures</p>
+        <p style='margin: 0.5rem 0;'>⚠️ Requires validation by qualified welding inspectors for critical applications</p>
+    </div>
+    
+    <div style='background-color: rgba(255, 255, 255, 0.1); padding: 1.5rem; border-radius: 10px;'>
+        <p style='font-size: 1.05em; margin-bottom: 1rem;'><strong>🏭 Industry Best Practices:</strong></p>
+        <p style='margin: 0.5rem 0;'>• Engage certified welding inspectors (CWI/CSWIP) for final acceptance</p>
+        <p style='margin: 0.5rem 0;'>• Adhere to applicable industry standards (AWS D1.1, ASME Section IX, ISO 5817)</p>
+        <p style='margin: 0.5rem 0;'>• Conduct thorough physical inspections and required quality tests</p>
+        <p style='margin: 0.5rem 0;'>• Maintain complete documentation and quality traceability</p>
+    </div>
+    
+    <p style='text-align: center; margin-top: 2rem; font-size: 0.95em; font-style: italic; opacity: 0.9;'>
+        Developed by <strong>Daniel Israel</strong> | Machine Learning Engineering Portfolio Project
+    </p>
 </div>
 """, unsafe_allow_html=True)
