@@ -7,4 +7,5 @@ tensorflow
 streamlit
 joblib
 Pillow
+pytesseract
 # Updated for Streamlit Cloud
