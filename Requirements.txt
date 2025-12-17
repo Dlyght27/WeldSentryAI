@@ -7,3 +7,4 @@ tensorflow
 streamlit
 joblib
 Pillow
+# Updated for Streamlit Cloud
