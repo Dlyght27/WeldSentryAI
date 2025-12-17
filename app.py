@@ -125,19 +125,19 @@ def is_welding_image(image):
         img_np = np.array(image.convert('L'))
         faces = face_cascade.detectMultiScale(img_np, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
         if len(faces) > 0:
-            return False, "Face Detected - Not a Welding Image"
+            return False, "Not a Welding Image"
     except Exception:
         pass
 
     if contains_text(image):
-        return False, "Text Content Detected - Not a Welding Image"
+        return False, "Not a Welding Image"
 
     if not has_sufficient_edge_density(image):
-        return False, "Insufficient Detail - Possibly Not a Welding Image"
+        return False, "Not a Welding Image"
 
     return True, "Valid Welding Image"
 
-# --- Feature Extraction Functions (Using App 2's working code) ---
+# --- Feature Extraction Functions (Using App 2's exact working code) ---
 def enhance_image(image):
     """Enhances the image using CLAHE for better feature extraction."""
     img_np = np.array(image.convert('L'))
@@ -169,7 +169,7 @@ def extract_glcm_features(image):
     return np.concatenate([graycoprops(glcm, p).ravel() for p in props])
 
 def get_prediction(image, use_enhancement):
-    """Generate prediction for the weld image - Using App 2's working logic."""
+    """Generate prediction - Using App 2's exact working code."""
     if model is None:
         return "Model not loaded", 0.0, None
 
@@ -181,13 +181,13 @@ def get_prediction(image, use_enhancement):
     img_resized = img_gray.resize((128, 128))
     img_array = np.array(img_resized)
 
-    # Extract features
+    # Extract features using App 2's exact method
     hog_f = extract_hog_features(img_array)
     lbp_f = extract_lbp_features(img_array)
     glcm_f = extract_glcm_features(img_array)
     features = np.hstack([hog_f, lbp_f, glcm_f])
 
-    # Feature count adjustment (if needed)
+    # Feature count adjustment
     EXPECTED_FEATURES = 8141
     if len(features) != EXPECTED_FEATURES:
         if len(features) > EXPECTED_FEATURES:
@@ -486,7 +486,7 @@ with tab1:
             
             st.markdown("### 📸 Image Validation")
             if not is_valid:
-                st.error(f"❌ **Validation Failed:** {reason}")
+                st.error(f"⚠️ Skipping - {reason}")
                 st.markdown("**Please upload a clear image of a weld bead.**")
                 col1, col2, col3 = st.columns([1,2,1])
                 with col2:
@@ -617,35 +617,53 @@ with tab3:
 
 # Footer
 st.markdown("---")
+
+# About Section
+st.markdown("## About WeldSentry AI")
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.markdown("""
+    <div style='background-color: #2d3748; padding: 1.5rem; border-radius: 10px; border-left: 5px solid #ffd700; height: 100%;'>
+        <h4 style='color: #ffd700; margin-top: 0;'>⚠️ Professional Disclaimer</h4>
+        <p style='color: #e2e8f0; font-size: 0.9em;'>
+            WeldSentry AI is an AI-powered screening tool designed to assist with preliminary weld quality assessment. 
+            This system leverages machine learning algorithms trained on welding defect patterns to provide rapid analysis.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col2:
+    st.markdown("""
+    <div style='background-color: #2d3748; padding: 1.5rem; border-radius: 10px; border-left: 5px solid #667eea; height: 100%;'>
+        <h4 style='color: #667eea; margin-top: 0;'>⚙️ System Capabilities</h4>
+        <p style='color: #e2e8f0; font-size: 0.85em; margin: 0.3rem 0;'>✓ Rapid preliminary defect screening</p>
+        <p style='color: #e2e8f0; font-size: 0.85em; margin: 0.3rem 0;'>✓ Batch processing for efficiency</p>
+        <p style='color: #e2e8f0; font-size: 0.85em; margin: 0.3rem 0;'>✓ Educational tool for defect analysis</p>
+        <p style='color: #fc8181; font-size: 0.85em; margin: 0.3rem 0; margin-top: 1rem;'>⚠️ Not a replacement for certified inspection</p>
+        <p style='color: #fc8181; font-size: 0.85em; margin: 0.3rem 0;'>⚠️ Requires professional validation</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col3:
+    st.markdown("""
+    <div style='background-color: #2d3748; padding: 1.5rem; border-radius: 10px; border-left: 5px solid #764ba2; height: 100%;'>
+        <h4 style='color: #764ba2; margin-top: 0;'>🏭 Industry Best Practices</h4>
+        <p style='color: #e2e8f0; font-size: 0.85em; margin: 0.3rem 0;'>• Engage certified welding inspectors</p>
+        <p style='color: #e2e8f0; font-size: 0.85em; margin: 0.3rem 0;'>• Follow industry standards (AWS, ASME, ISO)</p>
+        <p style='color: #e2e8f0; font-size: 0.85em; margin: 0.3rem 0;'>• Conduct thorough physical inspections</p>
+        <p style='color: #e2e8f0; font-size: 0.85em; margin: 0.3rem 0;'>• Maintain quality documentation</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+# Developer Credit
 st.markdown("""
-<div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 2.5rem; border-radius: 15px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);'>
-    <h2 style='text-align: center; margin-bottom: 1.5rem; color: white;'>About WeldSentry AI</h2>
-    
-    <div style='background-color: rgba(255, 255, 255, 0.1); padding: 1.5rem; border-radius: 10px; margin-bottom: 1.5rem; border-left: 5px solid #ffd700;'>
-        <p style='font-size: 1.1em; margin: 0;'><strong>⚠️ Professional Disclaimer</strong></p>
-        <p style='margin-top: 0.5rem;'>WeldSentry AI is an AI-powered screening tool designed to assist with preliminary weld quality assessment. 
-        This system leverages machine learning algorithms trained on welding defect patterns to provide rapid analysis.</p>
-    </div>
-    
-    <div style='background-color: rgba(255, 255, 255, 0.1); padding: 1.5rem; border-radius: 10px; margin-bottom: 1.5rem;'>
-        <p style='font-size: 1.05em; margin-bottom: 1rem;'><strong>⚙️ System Capabilities & Limitations:</strong></p>
-        <p style='margin: 0.5rem 0;'>✓ Rapid preliminary defect screening using computer vision</p>
-        <p style='margin: 0.5rem 0;'>✓ Batch processing for efficiency in quality control workflows</p>
-        <p style='margin: 0.5rem 0;'>✓ Educational tool for understanding weld defect characteristics</p>
-        <p style='margin: 0.5rem 0; margin-top: 1rem;'>⚠️ Not a replacement for certified inspection procedures</p>
-        <p style='margin: 0.5rem 0;'>⚠️ Requires validation by qualified welding inspectors for critical applications</p>
-    </div>
-    
-    <div style='background-color: rgba(255, 255, 255, 0.1); padding: 1.5rem; border-radius: 10px;'>
-        <p style='font-size: 1.05em; margin-bottom: 1rem;'><strong>🏭 Industry Best Practices:</strong></p>
-        <p style='margin: 0.5rem 0;'>• Engage certified welding inspectors (CWI/CSWIP) for final acceptance</p>
-        <p style='margin: 0.5rem 0;'>• Adhere to applicable industry standards (AWS D1.1, ASME Section IX, ISO 5817)</p>
-        <p style='margin: 0.5rem 0;'>• Conduct thorough physical inspections and required quality tests</p>
-        <p style='margin: 0.5rem 0;'>• Maintain complete documentation and quality traceability</p>
-    </div>
-    
-    <p style='text-align: center; margin-top: 2rem; font-size: 0.95em; font-style: italic; opacity: 0.9;'>
-        Developed by <strong>Daniel Israel</strong> | Machine Learning Engineering Portfolio Project
+<div style='text-align: center; padding: 1.5rem; background-color: #1a202c; border-radius: 10px;'>
+    <p style='color: #a0aec0; margin: 0; font-size: 0.95em;'>
+        Developed by <strong style='color: #667eea;'>Daniel Israel</strong> | Machine Learning Engineering Portfolio Project
     </p>
 </div>
 """, unsafe_allow_html=True)
