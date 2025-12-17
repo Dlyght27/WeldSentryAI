@@ -110,12 +110,12 @@ def get_prediction(image, use_enhancement):
     glcm_f = extract_glcm_features(img_array)
     features = np.hstack([hog_f, lbp_f, glcm_f])
 
-    # TEMPORARY FIX: Force correct feature count
+    # SILENT FIX: Force correct feature count
     EXPECTED_FEATURES = 8141
     if len(features) != EXPECTED_FEATURES:
-        st.warning(f"Feature mismatch detected: {len(features)} vs {EXPECTED_FEATURES}")
+        # st.warning(f"Feature mismatch detected: {len(features)} vs {EXPECTED_FEATURES}")  # ← REMOVE THIS LINE
         if len(features) > EXPECTED_FEATURES:
-            features = features[:EXPECTED_FEATURES]  # Truncate
+            features = features[:EXPECTED_FEATURES]
         else:
             features = np.pad(features, (0, EXPECTED_FEATURES - len(features)))
     
