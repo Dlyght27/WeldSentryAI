@@ -4,7 +4,6 @@ from PIL import Image
 import numpy as np
 import cv2
 import joblib
-import webbrowser
 from skimage.feature import hog, local_binary_pattern
 from skimage.feature import graycomatrix, graycoprops
 
@@ -21,37 +20,29 @@ def is_welding_image(image):
     """
     return True
 
-def enhance_image(image):
-    """
-    Enhances the image using contrast limited adaptive histogram equalization (CLAHE).
-    """
-    img_np = np.array(image.convert('L')) 
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-    enhanced_img = clahe.apply(img_np)
-    return Image.fromarray(enhanced_img).convert('RGB')
-
 def extract_hog_features(image):
-    features, hog_image = hog(image, orientations=8, pixels_per_cell=(16, 16),
-                             cells_per_block=(1, 1), visualize=True, block_norm='L2-Hys')
+    features = hog(image, orientations=9, pixels_per_cell=(8, 8),
+                             cells_per_block=(2, 2), transform_sqrt=True, visualize=False)
     return features
 
-def extract_lbp_features(image, P=8, R=1):
+def extract_lbp_features(image, P=24, R=3):
     lbp = local_binary_pattern(image, P, R, method='uniform')
-    (hist, _) = np.histogram(lbp.ravel(), bins=np.arange(0, P + 3), range=(0, P + 2))
+    (hist, _) = np.histogram(lbp.ravel(), bins=np.arange(0, P + 2), range=(0, P + 1))
     hist = hist.astype("float")
-    hist /= (hist.sum() + 1e-6)
+    hist /= (hist.sum() + 1e-8)
     return hist
 
 def extract_glcm_features(image):
-    glcm = graycomatrix(image, distances=[5], angles=[0], levels=256,
+    if np.max(image) == np.min(image):
+        return np.zeros(16)
+
+    glcm = graycomatrix(image, distances=[1], angles=[0, np.pi/4, np.pi/2, 3*np.pi/4], levels=256,
                         symmetric=True, normed=True)
-    contrast = graycoprops(glcm, 'contrast')[0, 0]
-    dissimilarity = graycoprops(glcm, 'dissimilarity')[0, 0]
-    homogeneity = graycoprops(glcm, 'homogeneity')[0, 0]
-    energy = graycoprops(glcm, 'energy')[0, 0]
-    correlation = graycoprops(glcm, 'correlation')[0, 0]
-    ASM = graycoprops(glcm, 'ASM')[0, 0]
-    return [contrast, dissimilarity, homogeneity, energy, correlation, ASM]
+    contrast = graycoprops(glcm, 'contrast').ravel()
+    energy = graycoprops(glcm, 'energy').ravel()
+    homogeneity = graycoprops(glcm, 'homogeneity').ravel()
+    correlation = graycoprops(glcm, 'correlation').ravel()
+    return np.concatenate([contrast, energy, homogeneity, correlation])
 
 def extract_all_features(image):
     hog_features = extract_hog_features(image)
@@ -68,12 +59,13 @@ def get_prediction(image):
     if model is None:
         return "Model not loaded", 0.0
 
-    # Preprocess the image
-    image_resized = image.resize((128, 128))
-    img_gray = np.array(image_resized.convert('L'))
+    # Preprocess the image: convert to grayscale, then resize
+    img_gray = image.convert('L')
+    image_resized = img_gray.resize((128, 128))
+    img_array = np.array(image_resized)
 
     # Extract features
-    features = extract_all_features(img_gray)
+    features = extract_all_features(img_array)
 
     # Reshape for the model
     features_reshaped = features.reshape(1, -1)
@@ -88,9 +80,7 @@ def get_prediction(image):
         return "Prediction error", 0.0
 
 # --- Streamlit App ---
-
 st.set_page_config(page_title="WeldSentry AI", layout="wide")
-
 st.title("WeldSentry AI 🤖")
 st.markdown("### Advanced Weld Quality Analysis")
 st.markdown("---")
@@ -100,11 +90,10 @@ with st.sidebar:
     st.header("Controls")
     uploaded_files = st.file_uploader(
         "Upload Weld Images", 
-        type=["jpg", "jpeg", "webp"], 
+        type=['jpg', 'jpeg', 'webp'], 
         accept_multiple_files=True
     )
     st.info("You can upload up to 20 images at a time.")
-
 
 if uploaded_files:
     if len(uploaded_files) > 20:
@@ -115,21 +104,14 @@ if uploaded_files:
 
     for uploaded_file in uploaded_files:
         st.markdown(f"#### Results for `{uploaded_file.name}`")
-        col1, col2 = st.columns(2)
-
+        
         original_image = Image.open(uploaded_file)
 
-        with col1:
-            st.image(original_image, caption="Original Image", use_column_width=True)
+        st.image(original_image, caption="Original Image", use_column_width=True, width=300)
         
         if not is_welding_image(original_image):
             st.error("This does not appear to be a welding image. Please upload a relevant image.")
             continue
-
-        with col2:
-            with st.spinner("Enhancing image..."):
-                enhanced_image = enhance_image(original_image)
-                st.image(enhanced_image, caption="Enhanced Image", use_column_width=True)
 
         with st.spinner("Analyzing weld quality..."):
             label, confidence = get_prediction(original_image)
@@ -140,47 +122,45 @@ if uploaded_files:
         if label == "Good Weld":
             st.success(f"**Result:** {label} (Confidence: {confidence:.2f})")
             st.markdown(
-                """
+                '''
                 **Feedback:** The weld appears to be of good quality. 
+
                 - **Appearance:** Consistent bead width and minimal spatter.
                 - **Recommendation:** No immediate action required. Continue monitoring for consistency.
-                """
+                '''
             )
         else:
             st.error(f"**Result:** {label} (Confidence: {confidence:.2f})")
             st.markdown(
-                """
+                '''
                 **Feedback:** The weld shows potential defects.
+
                 - **Possible Issues:** Could include porosity, cracks, or undercut.
                 - **Recommendation:** A detailed inspection by a certified welding inspector is recommended.
-                """
+                '''
             )
         st.markdown("---")
-
 
 # Footer
 st.markdown("---")
 st.markdown("### About WeldSentry AI")
 st.info(
-    """
+    '''
     **Disclaimer:** This is the first version of the WeldSentry AI model and it is not perfect. 
     It was developed by a final year mechanical engineering student. 
     For critical applications, a qualified welding consultant or inspector should be consulted.
-    """
+    '''
 )
-
 st.markdown("---")
 col1, col2 = st.columns([1, 4])
-
 with col1:
     st.markdown("Built by:")
-
 with col2:
     st.markdown("Danel Israel")
     st.markdown("danielisrael120@gmail.com")
 
 st.markdown(
-    """
+    '''
     <style>
         .st-emotion-cache-18ni7ap{
             padding-top: 2rem;
@@ -189,6 +169,6 @@ st.markdown(
             padding-top: 2rem;
         }
     </style>
-    """,
+    ''',
     unsafe_allow_html=True
 )
