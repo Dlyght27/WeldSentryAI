@@ -98,19 +98,27 @@ def get_prediction(image, use_enhancement):
 
     img_to_process = image
     if use_enhancement:
-        # Pass the original color image to be converted within the function
         img_to_process = enhance_image(image)
 
     img_gray = img_to_process.convert('L')
     img_resized = img_gray.resize((128, 128))
     img_array = np.array(img_resized)
 
-    # Extract all features
+    # Extract features
     hog_f = extract_hog_features(img_array)
     lbp_f = extract_lbp_features(img_array)
     glcm_f = extract_glcm_features(img_array)
     features = np.hstack([hog_f, lbp_f, glcm_f])
 
+    # TEMPORARY FIX: Force correct feature count
+    EXPECTED_FEATURES = 8141
+    if len(features) != EXPECTED_FEATURES:
+        st.warning(f"Feature mismatch detected: {len(features)} vs {EXPECTED_FEATURES}")
+        if len(features) > EXPECTED_FEATURES:
+            features = features[:EXPECTED_FEATURES]  # Truncate
+        else:
+            features = np.pad(features, (0, EXPECTED_FEATURES - len(features)))
+    
     try:
         pred = model.predict(features.reshape(1, -1))
         proba = np.max(model.predict_proba(features.reshape(1, -1)))
