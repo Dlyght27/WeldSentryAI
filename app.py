@@ -20,19 +20,19 @@ def is_welding_image(image):
     """
     # Simple check based on grayscale intensity and color.
     # This is a heuristic and might not be accurate.
-    gray_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2GRAY)
-    if np.mean(gray_image) < 50 or np.mean(gray_image) > 200:
-        return False
+    # gray_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2GRAY)
+    # if np.mean(gray_image) < 50 or np.mean(gray_image) > 200:
+    #     return False
     
-    # Check for dominant colors often found in welding (e.g., bright yellows, oranges, blues)
-    hsv = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2HSV)
-    lower_yellow = np.array([20, 100, 100])
-    upper_yellow = np.array([30, 255, 255])
-    mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
-    if cv2.countNonZero(mask) > image.size[0] * image.size[1] * 0.1:
-        return True
+    # # Check for dominant colors often found in welding (e.g., bright yellows, oranges, blues)
+    # hsv = cv2.cvtColor(np.array(image), cv.COLOR_RGB2HSV)
+    # lower_yellow = np.array([20, 100, 100])
+    # upper_yellow = np.array([30, 255, 255])
+    # mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
+    # if cv2.countNonZero(mask) > image.size[0] * image.size[1] * 0.1:
+    #     return True
 
-    return False
+    return True
 
 def enhance_image(image):
     """
