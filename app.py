@@ -16,13 +16,35 @@ except Exception as e:
 
 def is_welding_image(image):
     """
-    Placeholder function to detect if an image is a welding image.
+    Uses a pre-trained face detector to filter out images of people.
+    If a face is detected, it's not a welding image.
     """
-    return True
+    try:
+        face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+        img_np = np.array(image.convert('L'))  # Convert to grayscale numpy array
+        faces = face_cascade.detectMultiScale(img_np, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+        
+        # If any faces are detected, return False
+        if len(faces) > 0:
+            return False
+        return True  # No faces detected
+    except Exception as e:
+        st.warning(f"Could not perform face detection: {e}")
+        # Default to True if face detection fails, to not block processing
+        return True
+
+def enhance_image(image):
+    """
+    Enhances the image using contrast limited adaptive histogram equalization (CLAHE).
+    """
+    img_np = np.array(image.convert('L'))
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    enhanced_img = clahe.apply(img_np)
+    return Image.fromarray(enhanced_img).convert('RGB')
 
 def extract_hog_features(image):
     features = hog(image, orientations=9, pixels_per_cell=(8, 8),
-                             cells_per_block=(2, 2), transform_sqrt=True, visualize=False)
+                   cells_per_block=(2, 2), transform_sqrt=True, visualize=False)
     return features
 
 def extract_lbp_features(image, P=24, R=3):
@@ -36,38 +58,33 @@ def extract_glcm_features(image):
     if np.max(image) == np.min(image):
         return np.zeros(16)
 
-    glcm = graycomatrix(image, distances=[1], angles=[0, np.pi/4, np.pi/2, 3*np.pi/4], levels=256,
+    glcm = graycomatrix(image, distances=[1], angles=[0, np.pi / 4, np.pi / 2, 3 * np.pi / 4], levels=256,
                         symmetric=True, normed=True)
-    contrast = graycoprops(glcm, 'contrast').ravel()
-    energy = graycoprops(glcm, 'energy').ravel()
-    homogeneity = graycoprops(glcm, 'homogeneity').ravel()
-    correlation = graycoprops(glcm, 'correlation').ravel()
-    return np.concatenate([contrast, energy, homogeneity, correlation])
+    props = ['contrast', 'energy', 'homogeneity', 'correlation']
+    glcm_features = np.concatenate([graycoprops(glcm, prop).ravel() for prop in props])
+    return glcm_features
 
 def extract_all_features(image):
     hog_features = extract_hog_features(image)
     lbp_features = extract_lbp_features(image)
     glcm_features = extract_glcm_features(image)
-    
-    combined_features = np.hstack([hog_features, lbp_features, glcm_features])
-    return combined_features
+    return np.hstack([hog_features, lbp_features, glcm_features])
 
-def get_prediction(image):
-    """
-    Get prediction and confidence score from the model.
-    """
+def get_prediction(image, use_enhancement):
     if model is None:
         return "Model not loaded", 0.0
 
+    processed_image = image
+    if use_enhancement:
+        # Convert to grayscale before enhancing
+        processed_image = enhance_image(image.convert('L'))
+
     # Preprocess the image: convert to grayscale, then resize
-    img_gray = image.convert('L')
+    img_gray = processed_image.convert('L')
     image_resized = img_gray.resize((128, 128))
     img_array = np.array(image_resized)
 
-    # Extract features
     features = extract_all_features(img_array)
-
-    # Reshape for the model
     features_reshaped = features.reshape(1, -1)
 
     try:
@@ -79,96 +96,90 @@ def get_prediction(image):
         st.error(f"Error during prediction: {e}")
         return "Prediction error", 0.0
 
+# --- UI Display Functions ---
+def display_prediction_result(label, confidence):
+    st.subheader("Prediction:")
+    if label == "Good Weld":
+        st.success(f"**Result:** {label} (Confidence: {confidence:.2f})")
+    else:
+        st.error(f"**Result:** {label} (Confidence: {confidence:.2f})")
+
 # --- Streamlit App ---
 st.set_page_config(page_title="WeldSentry AI", layout="wide")
 st.title("WeldSentry AI 🤖")
 st.markdown("### Advanced Weld Quality Analysis")
 st.markdown("---")
 
-# Sidebar for controls
+# --- Sidebar Controls ---
 with st.sidebar:
     st.header("Controls")
-    uploaded_files = st.file_uploader(
-        "Upload Weld Images", 
-        type=['jpg', 'jpeg', 'webp'], 
-        accept_multiple_files=True
-    )
-    st.info("You can upload up to 20 images at a time.")
+    app_mode = st.radio("Choose Mode", ["Single Image Analysis", "Batch Image Analysis"])
+    use_enhancement = st.checkbox("Apply Image Enhancement")
 
-if uploaded_files:
-    if len(uploaded_files) > 20:
-        st.warning("Maximum of 20 images allowed per batch.")
-        uploaded_files = uploaded_files[:20]
+# --- Main App Logic ---
+if app_mode == "Single Image Analysis":
+    uploaded_file = st.file_uploader("Upload a Weld Image", type=['jpg', 'jpeg', 'webp'], key="single_uploader")
 
-    st.header("Analysis Results")
-
-    for uploaded_file in uploaded_files:
-        st.markdown(f"#### Results for `{uploaded_file.name}`")
-        
+    if uploaded_file:
         original_image = Image.open(uploaded_file)
 
-        st.image(original_image, caption="Original Image", use_column_width=True, width=300)
-        
         if not is_welding_image(original_image):
-            st.error("This does not appear to be a welding image. Please upload a relevant image.")
-            continue
-
-        with st.spinner("Analyzing weld quality..."):
-            label, confidence = get_prediction(original_image)
-
-        st.markdown("---")
-        st.subheader("Prediction:")
-        
-        if label == "Good Weld":
-            st.success(f"**Result:** {label} (Confidence: {confidence:.2f})")
-            st.markdown(
-                '''
-                **Feedback:** The weld appears to be of good quality. 
-
-                - **Appearance:** Consistent bead width and minimal spatter.
-                - **Recommendation:** No immediate action required. Continue monitoring for consistency.
-                '''
-            )
+            st.error("This does not appear to be a welding image. A face was detected. Please upload a relevant image.")
+            st.image(original_image, caption="Invalid Image", width=300)
         else:
-            st.error(f"**Result:** {label} (Confidence: {confidence:.2f})")
-            st.markdown(
-                '''
-                **Feedback:** The weld shows potential defects.
+            col1, col2 = st.columns(2)
+            with col1:
+                st.image(original_image, caption="Original Image", width=400)
+            
+            if use_enhancement:
+                with col2:
+                    enhanced_image = enhance_image(original_image)
+                    st.image(enhanced_image, caption="Enhanced Image", width=400)
 
-                - **Possible Issues:** Could include porosity, cracks, or undercut.
-                - **Recommendation:** A detailed inspection by a certified welding inspector is recommended.
-                '''
-            )
-        st.markdown("---")
+            with st.spinner("Analyzing weld quality..."):
+                label, confidence = get_prediction(original_image, use_enhancement)
 
-# Footer
-st.markdown("---")
+            st.markdown("---")
+            display_prediction_result(label, confidence)
+
+elif app_mode == "Batch Image Analysis":
+    uploaded_files = st.file_uploader("Upload Weld Images", type=['jpg', 'jpeg', 'webp'], accept_multiple_files=True, key="batch_uploader")
+
+    if uploaded_files:
+        if len(uploaded_files) > 20:
+            st.warning("Maximum of 20 images allowed per batch.")
+            uploaded_files = uploaded_files[:20]
+
+        st.header("Analysis Results")
+
+        for uploaded_file in uploaded_files:
+            st.markdown(f"#### Results for `{uploaded_file.name}`")
+            original_image = Image.open(uploaded_file)
+
+            if not is_welding_image(original_image):
+                st.warning(f"Skipping image `{uploaded_file.name}` as it does not appear to be a welding image (face detected).")
+                continue
+
+            col1, col2 = st.columns(2)
+            with col1:
+                st.image(original_image, caption="Original Image", width=300)
+            
+            if use_enhancement:
+                with col2:
+                    enhanced_image = enhance_image(original_image)
+                    st.image(enhanced_image, caption="Enhanced Image", width=300)
+
+            with st.spinner(f"Analyzing `{uploaded_file.name}`..."):
+                label, confidence = get_prediction(original_image, use_enhancement)
+            
+            display_prediction_result(label, confidence)
+            st.markdown("---")
+
+# --- Footer ---
 st.markdown("### About WeldSentry AI")
 st.info(
     '''
-    **Disclaimer:** This is the first version of the WeldSentry AI model and it is not perfect. 
-    It was developed by a final year mechanical engineering student. 
-    For critical applications, a qualified welding consultant or inspector should be consulted.
+    **Disclaimer:** This is a prototype model developed by a final year mechanical engineering student. 
+    For critical applications, always consult a qualified welding inspector.
     '''
-)
-st.markdown("---")
-col1, col2 = st.columns([1, 4])
-with col1:
-    st.markdown("Built by:")
-with col2:
-    st.markdown("Danel Israel")
-    st.markdown("danielisrael120@gmail.com")
-
-st.markdown(
-    '''
-    <style>
-        .st-emotion-cache-18ni7ap{
-            padding-top: 2rem;
-        }
-        .st-emotion-cache-z5fcl4{
-            padding-top: 2rem;
-        }
-    </style>
-    ''',
-    unsafe_allow_html=True
 )
