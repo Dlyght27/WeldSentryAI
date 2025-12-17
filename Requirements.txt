@@ -5,3 +5,5 @@ opencv-python
 scikit-image==0.25.0
 tensorflow
 streamlit
+joblib
+Pillow
